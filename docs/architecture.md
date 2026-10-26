@@ -7,7 +7,7 @@ testing, and documenting practical data engineering workflows.
 
 The platform is designed to support data ingestion, distributed
 processing, workflow orchestration, object storage, relational
-databases, monitoring, and eventually end-to-end analytics projects.
+databases, monitoring, and eventually end-to-end data engineering and analytics projects.
 
 ## 2. Architecture Overview
 
