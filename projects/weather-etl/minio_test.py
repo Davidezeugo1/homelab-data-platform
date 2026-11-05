@@ -18,18 +18,6 @@ config = Config(
         } 
 )
 
-# 2. Create an S3 client
-# boto3.client("s3", ...)
-# def create_s3_client(access_key, secret_key, endpoint_url, config):
-#     reslut = boto3.client(
-#         "s3",
-#         aws_access_key_id=access_key,
-#         aws_secret_access_key=secret_key,
-#         endpoint_url=endpoint_url,
-#         config=config
-#     )
-#     return reslut
-
 #catch credential errors
 if not all([access_key, secret_key, endpoint_url]):
     print("Missing MinIO credentials. Please set the environment variables.")
