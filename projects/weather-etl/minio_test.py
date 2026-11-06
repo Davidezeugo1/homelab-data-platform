@@ -31,15 +31,16 @@ s3_client = boto3.client(
     endpoint_url=endpoint_url,
     config=config
 )
+file_path = 'data/raw/weather.json'
 
 # 3. Connect to your MinIO endpoint
 def connect_to_minio(s3_client):
     try:
-        response = s3_client.list_buckets()
-        print("Connected to MinIO successfully.")
-        # 4. List buckets
-        for bucket in response.get('Buckets', []):
-            print(f"Bucket Name: {bucket['Name']}")
+        s3_client.upload_file(
+            Filename=file_path,
+            Bucket="raw-data",
+            Key="weather/weather.json"
+        )
     #5 . Handle exceptions for connection, timeouts, and credential errors
     except EndpointConnectionError as e:
         print(f"Endpoint Connection Error:, {e}")
