@@ -34,7 +34,7 @@ s3_client = boto3.client(
 file_path = 'data/raw/weather.json'
 
 # 3. Connect to your MinIO endpoint
-def connect_to_minio(s3_client):
+def upload_to_minio(s3_client):
     try:
         s3_client.upload_file(
             Filename=file_path,
