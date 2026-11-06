@@ -3,8 +3,12 @@ import requests
 import json 
 from datetime import datetime
 import sys
+import os
 import time
 import responses
+import boto3
+from botocore.config import Config
+from botocore.exceptions import (ClientError, EndpointConnectionError, NoCredentialsError, ConnectTimeoutError, ReadTimeoutError, ConnectionClosedError)
 
 # set the URL and parameters for the API request
 url =  "https://api.open-meteo.com/v1/forecast"
@@ -58,11 +62,68 @@ timestamp = f"weather_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
 # 1. Define the correct path
 file_path = f'data/raw/{timestamp}.json'
-print("loading raw data to .josn file")
+print(f"loading raw data to {file_path}.josn file")
 
 #Open file and save the raw json
 with open(file_path, "w") as f:
     json.dump(data, f, indent=4)
+
+
+# 1. Retrieve credentials from environment variables
+access_key = os.getenv("MINIO_ACCESS_KEY")
+secret_key = os.getenv("MINIO_SECRET_KEY")
+endpoint_url = os.getenv("MINIO_ENDPOINT")
+config = Config(
+    signature_version = 'v4',
+    connect_timeout=5,
+    read_timeout=10,
+    retries={
+        "max_attempts": 3, 
+        "mode": "standard"
+        } 
+)
+
+#catch credential errors
+if not all([access_key, secret_key, endpoint_url]):
+    print("Missing MinIO credentials. Please set the environment variables.")
+    sys.exit("Exiting due to missing credentials.")
+
+print("Creating S3 client...")
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id=access_key,
+    aws_secret_access_key=secret_key,
+    endpoint_url=endpoint_url,
+    config=config
+)
+
+# Connect to your MinIO endpoint
+def connect_to_minio(s3_client):
+    try:
+        s3_client.upload_file(
+            Filename=file_path,
+            Bucket="raw-data",
+            Key=f"weather/{timestamp}.json"
+        )
+        print("Connected to MinIO successfully.")
+        print(f"File uploaded to MinIO bucket 'weather' at 'raw/{timestamp}.json'")
+    # Handle exceptions for connection, timeouts, and credential errors
+    except EndpointConnectionError as e:
+        print(f"Endpoint Connection Error:, {e}")
+        sys.exit("Exiting due to connection error.")
+    except (ConnectTimeoutError, ConnectionClosedError, ReadTimeoutError) as e:
+        print(f"MinIO Connection Timeout Error:, {e}")
+        sys.exit("Exiting due to connection error.") 
+    except NoCredentialsError as e:
+        print(f"No credential Error:, {e}")
+        sys.exit("Exiting due to connection error.") 
+    except ClientError as e:
+        print(f"Client Error:, {e}")
+        sys.exit("Exiting due to connection error.")  
+
+connect_to_minio(s3_client)
+
+#connect to minio and upload the file to the bucket
 
 
 # function to validate the json data is correct
@@ -115,6 +176,8 @@ def savetofile(data: dict):
 result = validate_weather(data)
 validate_temp(result)
 savetofile(data) 
+
+
 
 #closing the file and checking if the file is closed or not
 print (f"file was closed: {f.closed}")
