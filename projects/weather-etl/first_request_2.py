@@ -98,7 +98,7 @@ s3_client = boto3.client(
 )
 
 # Connect to your MinIO endpoint
-def connect_to_minio(s3_client):
+def upload_to_minio(s3_client):
     try:
         s3_client.upload_file(
             Filename=file_path,
@@ -106,7 +106,7 @@ def connect_to_minio(s3_client):
             Key=f"weather/{timestamp}.json"
         )
         print("Connected to MinIO successfully.")
-        print(f"File uploaded to MinIO bucket 'weather' at 'raw/{timestamp}.json'")
+        print(f"File uploaded to MinIO bucket 'raw-data' at 'weather/{timestamp}.json'")
     # Handle exceptions for connection, timeouts, and credential errors
     except EndpointConnectionError as e:
         print(f"Endpoint Connection Error:, {e}")
@@ -121,7 +121,7 @@ def connect_to_minio(s3_client):
         print(f"Client Error:, {e}")
         sys.exit("Exiting due to connection error.")  
 
-connect_to_minio(s3_client)
+upload_to_minio(s3_client)
 
 #connect to minio and upload the file to the bucket
 
