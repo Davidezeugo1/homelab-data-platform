@@ -55,4 +55,4 @@ def upload_to_minio(s3_client):
         print(f"Client Error:, {e}")
         sys.exit("Exiting due to connection error.")  
 
-connect_to_minio(s3_client)
+upload_to_minio(s3_client)

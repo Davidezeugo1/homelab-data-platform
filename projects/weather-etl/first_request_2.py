@@ -9,6 +9,7 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import (ClientError, EndpointConnectionError, NoCredentialsError, ConnectTimeoutError, ReadTimeoutError, ConnectionClosedError)
 
+
 # set the URL and parameters for the API request
 url =  "https://api.open-meteo.com/v1/forecast"
 params = {
@@ -123,32 +124,31 @@ def upload_to_minio(s3_client, file_path):
 # function to validate the json data is correct
 def validate_weather(mydata: dict):
     print("loading date for validation...")
-    if "current" in mydata and isinstance(mydata["current"], dict):
+    if isinstance(mydata, dict):
        inner_dic = mydata.get("current")
        if isinstance(inner_dic, dict):
             if "temperature_2m" in inner_dic:
                 val = inner_dic.get('temperature_2m')
-                time = inner_dic.get('time')
                 if isinstance (val, (int, float)) and not isinstance (val, bool):
-                    result= (val,time,"Success")
+                    result= (val,"Success")
                     return result
                 else:
-                    result= (None,None, "ERROR: temperature_2m is not a number.")
+                    result= (None, "ERROR: temperature_2m is not a number.")
                     return result
             else:
-                result =(None,None,"ERROR: temperature_2m not found in the inner dictionary.")
+                result =(None,"ERROR: temperature_2m not found in the inner dictionary.")
                 return result
        else: 
-            result = (None, None, "ERROR: The 'current' key does not contain a dictionary.")
+            result = (None, "ERROR: The 'current' key does not contain a dictionary.")
             return result
     else:
-        result = (None,None , "ERROR: The Json does't have the date we are looking for.")
+        result = (None, "ERROR: The json is not a dictionary.")
         return result
 
 
 # function to validate temperature and print the result
 def validated_temp(result):
-    temperature, time, message = result
+    temperature, message = result
     if temperature is None: 
         print (message) 
     else:
@@ -156,16 +156,19 @@ def validated_temp(result):
         print (f"Current temperature: {temperature}°C")
 
 
-def save_validated_to_minio(result, s3_client, file_path):
+def save_validated_to_minio(result, s3_client, file_path, data):
     file_path, timestamp = file_path # Unpack the tuple returned from save_raw_data_local
-    temperature, time, message = result # Unpack the tuple returned 
+    temperature, message = result # Unpack the tuple returned 
     if temperature is not None:
         try:
+            
             message_body ={
                 "current": {
-                    "time": time,
+                    "latitude": data.get('latitude'),
+                    "longitude": data.get('longitude'),
+                    "time": data.get('current', {}).get('time'),
                     "temperature": temperature,
-                    "units": "°C",
+                    "units": data.get('current_units', {}).get('temperature_2m'),
                     "message": message
                 }
             }
@@ -202,7 +205,7 @@ def save_validated_to_minio(result, s3_client, file_path):
 data = fetch_weather(url, params)
 raw_file_path = save_raw_data_local(data)
 upload_to_minio(s3_client, raw_file_path)
-validate_weather_result = validate_weather(data) 
-validated_temp(validate_weather_result)
-save_validated_to_minio(validate_weather_result, s3_client, raw_file_path)  
+valid_weather_result = validate_weather(data)
+validated_temp(valid_weather_result)
+save_validated_to_minio(valid_weather_result, s3_client, raw_file_path, data)  
 
