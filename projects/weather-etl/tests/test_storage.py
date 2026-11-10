@@ -26,48 +26,17 @@ def test_upload_to_minio(tmp_path):
         '{"current" : {"temperature_2m" : 23.5}}',
         encoding = "utf-8"
     )
-    saved_file = (file_path, "weather_test")
+    saved_file = (file_path, "weather_test") 
 
     object_key = upload_to_minio(s3_client, saved_file)
 
-    assert s3_client.upload_file.call_count == 1
-    assert object_key == "weather/weather_test.json"
+    assert s3_client.upload_file.call_count == 1 
+    assert object_key == "weather/weather_test.json" 
     s3_client.upload_file.assert_called_once_with(
         Filename=str(file_path),
         Bucket="raw-data",
         Key="weather/weather_test.json"
     )
-
-# def test_save_validated_data_to_minio(tmp_path):
-#     s3_client = Mock()
-
-#     result= (23.5, "Success")
-
-#     file_path= (None, "weather_test")
-
-#     data = {
-#         "latitude": 38.96,
-#         "longitude": -92.37,
-#         "current": {
-#             "time": "2026-11-10T10:00",
-#         },
-#         "current_units": {
-#             "temperature_2m": "°C"
-#         }
-#     }
-
-#     object_key = save_validated_data_to_minio(result, s3_client, file_path, data)
-
-#     s3_client.put_object.assert_called_once_with(
-#         Bucket= "validated-data",
-#         Key= "weather/weather_test.json",
-#         ContentType= "application/json"
-#     )
-
-#     assert s3_client.bucket == "validated-data"
-#     assert object_key == None
-#     assert s3_client.ContentType == "application/json"
-#     assert result == 23.5
 
 def test_save_validated_data_to_minio():
     s3_client = Mock()
@@ -107,3 +76,20 @@ def test_save_validated_data_to_minio():
     assert uploaded_data["current"]["message"] == "Success"
 
     assert object_key == "weather/weather_test.json"
+
+def test_save_validated_data_rejects_invalid_temperature():
+    s3_client = Mock()
+
+    result = (None, "ERROR: temperature is missing")
+    file_path = (None, "weather_test")
+    data = {}
+
+    with pytest.raises(ValueError):
+        save_validated_data_to_minio(
+            result, s3_client, file_path, data
+        )
+
+    s3_client.put_object.assert_not_called()
+
+    
+
