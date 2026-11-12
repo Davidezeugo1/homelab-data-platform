@@ -37,14 +37,14 @@ def upload_to_minio(s3_client, save_file):
         Key= object_key
     )
 
-    print(f"Uploaded raw data to raw-data/{object_key}")
+    #print(f"Uploaded raw data to raw-data/{object_key}")
 
     return object_key
 
 
-def save_validated_data_to_minio(result, s3_client, file_path, data):
+def save_validated_data_to_minio(result, s3_client, object_key, data):
 
-    _, timestamp = file_path
+    _, timestamp = object_key 
     temperature, message = result
 
     if temperature is None:
@@ -72,6 +72,6 @@ def save_validated_data_to_minio(result, s3_client, file_path, data):
         ContentType= "application/json"
     )
 
-    print(f"Uploaded validated data to validated-data/{object_key}")
+    #print(f"Uploaded validated data to validated-data/{object_key}")
 
     return object_key

@@ -18,6 +18,9 @@ venv/
 .coverage
 htmlcov/
 
+# Local development and reference scripts
+scripts/
+
 # Logs and local data
 *.log
 data/
