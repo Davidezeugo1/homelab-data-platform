@@ -19,7 +19,11 @@ def extract_weather():
     s3_client = create_s3_client()
 
     # 2. Fetch weather data
-    data = fetch_weather(url, params)
+    try:
+        data = fetch_weather(url, params)
+    except Exception:
+        logger.exception("Could not fetch weather_data")
+        raise 
 
     # 3. Generate a unique object key
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
@@ -29,17 +33,22 @@ def extract_weather():
     weather_json = json.dumps(data, indent=4)
 
     # 5. Upload raw JSON to MinIO
-    s3_client.put_object(
-        Bucket="raw-data",
-        Key=raw_object_key,
-        Body=weather_json,
-        ContentType="application/json"
-    )
+    try:
+        s3_client.put_object(
+            Bucket="raw-data",
+            Key=raw_object_key,
+            Body=weather_json,
+            ContentType="application/json"
+        )
+    except Exception:
+        logger.exception("Failed to upload raw weather data to MinIO")
+        raise
 
     logger.info(
         "Raw weather data uploaded to MinIO: %s",
         raw_object_key
     )
+
     # 6. Return object key for the next Airflow task
     return raw_object_key
 
@@ -50,14 +59,21 @@ def validate_weather(raw_object_key):
     s3_client = create_s3_client()
 
     # 2. Download raw JSON from MinIO
-    response = s3_client.get_object(
-        Bucket="raw-data",
-        Key=raw_object_key
-    )
+    try:
+        response = s3_client.get_object(
+            Bucket="raw-data",
+            Key=raw_object_key
+        )
+    except Exception:
+        logger.exception("Failed to download raw data from MinIO")
+        raise
 
     # 3. Convert JSON text into a Python dictionary
-    data = json.loads(response["Body"].read().decode("utf-8"))
-
+    try:
+        data = json.loads(response["Body"].read().decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.exception("Failed to Decode raw weather JSON")
+        raise
     # 4. Validate the weather data
     temperature, message = weather_validation(data)
 
@@ -94,17 +110,25 @@ def store_weather(validated_weather, raw_object_key):
     validated_object_key = f"weather/{filename}"
 
     # 3. Convert validated dictionary to JSON
-    validated_json = json.dumps(validated_weather, indent=4)
-
+    try:
+        validated_json = json.dumps(validated_weather, indent=4)
+    except (TypeError, ValueError):
+        logger.exception("Failed to encode validated weather to JSON")
+        raise
+    
     # 4. Upload validated JSON to MinIO
-    s3_client.put_object(
-        Bucket="validated-data",
-        Key=validated_object_key,
-        Body=validated_json,
-        ContentType="application/json"
-    )
+    try:
+        s3_client.put_object(
+            Bucket="validated-data",
+            Key=validated_object_key,
+            Body=validated_json,
+            ContentType="application/json"
+        )
+    except Exception:
+        logger.exception("Failed to upload validated weather data to MinIO")
+        raise
 
-    logger.info("Validated data uploaded + object key: %s",
+    logger.info("Validated data uploaded to MinIO: %s",
         validated_object_key
     )
     # 5. Return the validated object key
@@ -113,5 +137,5 @@ def store_weather(validated_weather, raw_object_key):
 if __name__ == "__main__":
     raw_object_key = extract_weather()
     valid_weather = validate_weather(raw_object_key)
-    store_weather = store_weather(valid_weather, raw_object_key)
+    store_weather_data = store_weather(valid_weather, raw_object_key)
     print(f"Extraction successful: {raw_object_key}")
