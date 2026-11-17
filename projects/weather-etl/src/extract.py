@@ -1,44 +1,65 @@
 #import libraries
+import logging
 import requests
-import time 
+import time
+
+logger = logging.getLogger(__name__)
+
 
 def fetch_weather(url, params) -> dict:
-    for attempt in range(2):  # allow only 2 attempt 
+    for attempt in range(2):
         try:
-            response = requests.get(url, params=params, timeout=(5,10))
-            #Handle HTTP error 429(To manu request)
+            logger.info("Weather API request: attempt %s of 2", attempt + 1)
+
+            response = requests.get(url, params=params, timeout=(5, 10))
+
             if response.status_code == 429:
-                print(f"Attempt {attempt + 1}...falied")
-                retry_after= int(response.headers.get("Retry-After", 5))
-                print(f"HTTP-Error(429) Rate limited. Waiting {retry_after} seconds...")
+                retry_after = int(response.headers.get("Retry-After", 5))
+
+                logger.warning(
+                    "API rate limited. Waiting %s seconds.",
+                    retry_after
+                )
 
                 if attempt < 1:
                     time.sleep(retry_after)
                     continue
                 else:
-                    raise RuntimeError("Weather API request failed after 2 attempts.")
+                    raise RuntimeError(
+                        "Weather API request failed after 2 attempts."
+                    )
 
-            response.raise_for_status()  # Raise an exception for HTTP errors
-            data = response.json()  # Convert the response to JSON format if no exceptions occurred
+            response.raise_for_status()
+
+            data = response.json()
+
             if not isinstance(data, dict):
-                raise ValueError("Weather API response must be a dictionary.")
-            return data  #exit the loop if the request was successful
-        except (requests.exceptions.ConnectTimeout,
-                requests.exceptions.ConnectionError,
-                requests.exceptions.ReadTimeout ) as net_e:
-            print(f"Attempt {attempt + 1} failed: network error : {net_e}")
+                raise ValueError(
+                    "Weather API response must be a dictionary."
+                )
 
+            logger.info("Weather API extraction successful")
+            return data
+
+        except (
+            requests.exceptions.ConnectTimeout,
+            requests.exceptions.ConnectionError,
+            requests.exceptions.ReadTimeout
+        ):
             if attempt < 1:
-                print("\nRetrying...\n")
-                time.sleep(2)  # Wait for 2 seconds before retrying
+                logger.warning(
+                    "Network error on attempt %s. Retrying...",
+                    attempt + 1
+                )
+                time.sleep(2)
             else:
-                raise 
-            
-        except requests.exceptions.HTTPError as http_e:
-            print(f"error httperror : {http_e}")
+                logger.exception("Weather API network request failed")
+                raise
+
+        except requests.exceptions.HTTPError:
+            logger.exception("Weather API returned an HTTP error")
             raise
 
-        except requests.exceptions.JSONDecodeError as json_e:  
-            print(f"error jsondecodeerror : {json_e}")
+        except requests.exceptions.JSONDecodeError:
+            logger.exception("Weather API returned invalid JSON")
             raise
-
