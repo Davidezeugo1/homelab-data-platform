@@ -26,9 +26,16 @@ def extract_weather():
         raise 
 
     # 3. Generate a unique object key
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
-    raw_object_key = f"weather/weather_{timestamp}.json"
+# 3. Generate a deterministic object key
+    timestamp = datetime.strptime(
+        data["current"]["time"], "%Y-%m-%dT%H:%M"
+    ).strftime("%Y%m%d_%H%M")
 
+    latitude = data["latitude"]
+    longitude = data["longitude"]
+
+    raw_object_key = f"weather/{latitude}_{longitude}/{timestamp}.json"
+    
     # 4. Convert dictionary to JSON
     weather_json = json.dumps(data, indent=4)
 
