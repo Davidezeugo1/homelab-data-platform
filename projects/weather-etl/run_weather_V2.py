@@ -25,8 +25,7 @@ def extract_weather():
         logger.exception("Could not fetch weather_data")
         raise 
 
-    # 3. Generate a unique object key
-# 3. Generate a deterministic object key
+    # 3. Generate a deterministic object key
     timestamp = datetime.strptime(
         data["current"]["time"], "%Y-%m-%dT%H:%M"
     ).strftime("%Y%m%d_%H%M")
@@ -35,7 +34,7 @@ def extract_weather():
     longitude = data["longitude"]
 
     raw_object_key = f"weather/{latitude}_{longitude}/{timestamp}.json"
-    
+
     # 4. Convert dictionary to JSON
     weather_json = json.dumps(data, indent=4)
 
